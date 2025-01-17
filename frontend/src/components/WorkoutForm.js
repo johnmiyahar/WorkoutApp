@@ -2,8 +2,8 @@ import React, { useState } from "react";
 
 function WorkoutForm() {
     const [title, setTitle] = useState("");
-    const [load, setLoad] = useState();
-    const [reps, setReps] = useState();
+    const [load, setLoad] = useState(0);
+    const [reps, setReps] = useState(0);
     const [error, setError] = useState(null);
 
     const handleSubmit = async (e) => {

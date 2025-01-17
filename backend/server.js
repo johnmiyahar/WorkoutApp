@@ -18,6 +18,7 @@ const cors = require("cors");
 // Set up the express app
 const app = express();
 
+app.use(cors());
 // Middleware:
 // any code that executes between us getting a request on the server
 // and us sending a response back to the client

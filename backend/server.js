@@ -13,6 +13,8 @@ const mongoose = require("mongoose");
 // Require routes
 const workoutRoutes = require("./routes/workouts");
 
+const cors = require("cors");
+
 // Set up the express app
 const app = express();
 

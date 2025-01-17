@@ -26,7 +26,6 @@ function WorkoutForm() {
             setTitle('')
             setLoad('')
             setReps('')
-            setError(null)
             console.log('new workout added', json)
         }
     }

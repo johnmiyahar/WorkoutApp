@@ -8,7 +8,8 @@ const WorkoutDetails = ({ workout }) => {
 
   const handleClick = async () => {
     const response = await fetch(
-      `${process.env.REACT_APP_URL}/api/workouts/${workout._id}`, {
+      `${process.env.REACT_APP_URL}/api/workouts/${workout._id}`, 
+      {
       method: 'DELETE'
     })
     const json = await response.json()

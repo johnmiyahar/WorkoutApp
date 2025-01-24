@@ -1,51 +1,83 @@
-// Entry file for the backend app
-// where we register the express app
+const express = require('express');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const User = require('./models/userModel');
+const Workout = require('./models/workoutModel');
+const requireAuth = require('./middleware/requireAuth');
 
-// dovenv is the package that loads environment variables
-// from .env file into process.env object available globally in node.js environment
-// config() attaches environment variables to process.env
-require("dotenv").config();
+dotenv.config();
 
-// Require express that installed via npm
-const express = require("express");
-// Require mongoose that installed via npm
-const mongoose = require("mongoose");
-// Require routes
-const workoutRoutes = require("./routes/workouts");
-
-const cors = require("cors");
-
-// Set up the express app
 const app = express();
-
 app.use(cors());
-// Middleware:
-// any code that executes between us getting a request on the server
-// and us sending a response back to the client
-
-// Parse and attach data sent to server to request object
 app.use(express.json());
 
-// Global middleware
-// the arrow function will fire for each request that comes in
-app.use((req, res, next) => {
-  console.log(req.path, req.method);
-  next();
+mongoose.connect('mongodb://localhost/workoutdb', { useNewUrlParser: true, useUnifiedTopology: true });
+
+app.post('/api/auth/signup', async (req, res) => {
+  const { email, password } = req.body;
+
+  const userExists = await User.findOne({ email });
+  if (userExists) {
+    return res.status(400).send({ error: 'User already exists' });
+  }
+
+  const user = new User({ email, password });
+  await user.save();
+
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'yourSuperSecretKey', { expiresIn: '1h' });
+
+  res.status(201).send({ token });
 });
 
-// Routes
-// workoutRoutes is triggered when we make a request to /api/workouts
-app.use("/api/workouts", workoutRoutes);
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body;
 
-// Connect to DB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    // Listen for requests
-    app.listen(process.env.PORT, () => {
-      console.log("Connected to DB & listening on port", process.env.PORT);
-    });
-  })
-  .catch((err) => {
-    console.log(err);
-  });
+  const user = await User.findOne({ email });
+  if (!user) {
+    return res.status(400).send({ error: 'Invalid credentials' });
+  }
+
+  if (user.password !== password) {
+    return res.status(400).send({ error: 'Invalid credentials' });
+  }
+
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'yourSuperSecretKey', { expiresIn: '1h' });
+
+  res.status(200).send({ token });
+});
+
+app.post('/api/workouts', requireAuth, async (req, res) => {
+  const { title, load, reps } = req.body;
+  const userId = req.userId;
+
+  const workout = new Workout({ title, load, reps, userId });
+  await workout.save();
+  res.status(201).send(workout);
+});
+
+app.get('/api/workouts', requireAuth, async (req, res) => {
+  const userId = req.userId;
+
+  const workouts = await Workout.find({ userId });
+  res.status(200).send(workouts);
+});
+
+app.delete('/api/workouts/:id', requireAuth, async (req, res) => {
+  const userId = req.userId;
+  const workoutId = req.params.id;
+
+  const workout = await Workout.findOne({ _id: workoutId, userId });
+  if (!workout) {
+    return res.status(404).send({ error: 'Workout not found or not authorized' });
+  }
+
+  await Workout.deleteOne({ _id: workoutId });
+  res.status(200).send({ message: 'Workout deleted' });
+});
+
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
